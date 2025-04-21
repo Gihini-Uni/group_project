@@ -14,3 +14,11 @@ class Income(db.Model):
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)  # Use DateTime here
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
+class Expense(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float, nullable=False)
+    category = db.Column(db.String(100), nullable=False)
+    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)  # Use DateTime here
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+
