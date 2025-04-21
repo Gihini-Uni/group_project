@@ -182,3 +182,10 @@ def add_expense():
         db.session.commit()
         return redirect(url_for('dashboard'))
     return render_template('expense.html')
+
+@app.route('/delete_expense/<int:id>')
+def delete_expense(id):
+    expense = Expense.query.get_or_404(id)
+    db.session.delete(expense)
+    db.session.commit()
+    return redirect(url_for('dashboard'))
