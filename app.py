@@ -168,3 +168,17 @@ def delete_income(id):
     db.session.delete(income)
     db.session.commit()
     return redirect(url_for('dashboard'))
+
+@app.route('/add_expense', methods=['GET', 'POST'])
+def add_expense():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        amount = float(request.form['amount'])
+        category = request.form['category']
+        new_expense = Expense(amount=amount, category=category,
+                              user_id=session['user_id'], date=datetime.now())
+        db.session.add(new_expense)
+        db.session.commit()
+        return redirect(url_for('dashboard'))
+    return render_template('expense.html')
