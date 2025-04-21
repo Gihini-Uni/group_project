@@ -148,3 +148,17 @@ def dashboard():
                            total_income=total_income, total_expense=total_expense,
                            balance=balance, category_summary=category_summary)
 
+@app.route('/add_income', methods=['GET', 'POST'])
+def add_income():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        amount = float(request.form['amount'])
+        category = request.form['category']
+        new_income = Income(amount=amount, category=category,
+                            user_id=session['user_id'], date=datetime.now())
+        db.session.add(new_income)
+        db.session.commit()
+        return redirect(url_for('dashboard'))
+    return render_template('income.html')
+
