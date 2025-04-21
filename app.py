@@ -92,3 +92,39 @@ def report():
         savings=savings,
         report_data=report_data
     )
+
+@app.route('/')
+def index():
+    return redirect(url_for('login'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists.')
+            return redirect(url_for('register'))
+        user = User(username=username, password=password)
+        db.session.add(user)
+        db.session.commit()
+        flash('Registration successful. Please log in.')
+        return redirect(url_for('login'))
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password, password):
+            session['user_id'] = user.id
+            return redirect(url_for('dashboard'))
+        flash('Invalid credentials.')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    # Logic for logging out the user, e.g., clearing session, redirecting to login page, etc.
+    return redirect(url_for('login'))
