@@ -189,3 +189,11 @@ def delete_expense(id):
     db.session.delete(expense)
     db.session.commit()
     return redirect(url_for('dashboard'))
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        if not os.path.exists('expense_tracker.db'):
+            db.create_all()
+    app.run(debug=True)
+
