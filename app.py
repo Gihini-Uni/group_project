@@ -162,3 +162,9 @@ def add_income():
         return redirect(url_for('dashboard'))
     return render_template('income.html')
 
+@app.route('/delete_income/<int:id>')
+def delete_income(id):
+    income = Income.query.get_or_404(id)
+    db.session.delete(income)
+    db.session.commit()
+    return redirect(url_for('dashboard'))
