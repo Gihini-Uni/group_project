@@ -128,3 +128,23 @@ def login():
 def logout():
     # Logic for logging out the user, e.g., clearing session, redirecting to login page, etc.
     return redirect(url_for('login'))
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user_id = session['user_id']
+    income = Income.query.filter_by(user_id=user_id).all()
+    expense = Expense.query.filter_by(user_id=user_id).all()
+    total_income = sum(i.amount for i in income)
+    total_expense = sum(e.amount for e in expense)
+    balance = total_income - total_expense
+
+    category_summary = {}
+    for e in expense:
+        category_summary[e.category] = category_summary.get(e.category, 0) + e.amount
+
+    return render_template('dashboard.html', income=income, expense=expense,
+                           total_income=total_income, total_expense=total_expense,
+                           balance=balance, category_summary=category_summary)
+
