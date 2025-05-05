@@ -334,52 +334,77 @@ def dashboard():
         currency=user.currency  # <-- This line ensures correct currency is shown
     )
     
-@app.route('/add_income', methods=['GET', 'POST'])
+@app.route("/add_income", methods=["GET", "POST"])
+@login_required
 def add_income():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    if request.method == 'POST':
-        amount = float(request.form['amount'])
-        category = request.form['category']
-        new_income = Income(amount=amount, category=category,
-                            user_id=session['user_id'], date=datetime.now())
-        db.session.add(new_income)
-        db.session.commit()
-        return redirect(url_for('dashboard'))
-    return render_template('income.html')
+    if request.method == "POST":
+        amount = request.form.get("amount")
+        category = request.form.get("category")
+        date_str = request.form.get("income_date")
+        date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.today().date()
+        description = request.form.get("description")
+        
+        print(f"Description received: {description}")
 
-@app.route('/delete_income/<int:id>')
-def delete_income(id):
-    income = Income.query.get_or_404(id)
-    db.session.delete(income)
-    db.session.commit()
-    return redirect(url_for('dashboard'))
+        if not amount or not category or not date:
+            flash("Please fill in all required fields.", "error")
+        else:
+            new_income = Income(
+                user_id=current_user.id,
+                amount=float(amount),
+                category=category,
+                date=date,
+                description=description
+            )
+            db.session.add(new_income)
+            db.session.commit()
+            flash("Income added successfully!", "success")
+            return redirect(url_for("dashboard"))
 
-@app.route('/add_expense', methods=['GET', 'POST'])
+    # Load the latest categories for the dropdown
+    income_categories = [cat.name for cat in IncomeCategory.query.all()]
+    return render_template("add_income.html", income_categories=income_categories)
+
+@app.route("/add_expense", methods=["GET", "POST"])
+@login_required
 def add_expense():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    if request.method == 'POST':
-        amount = float(request.form['amount'])
-        category = request.form['category']
-        new_expense = Expense(amount=amount, category=category,
-                              user_id=session['user_id'], date=datetime.now())
-        db.session.add(new_expense)
-        db.session.commit()
-        return redirect(url_for('dashboard'))
-    return render_template('expense.html')
+    if request.method == "POST":
+        # Get the values from the form
+        amount = request.form.get("amount")
+        category = request.form.get("category")
+        date_str = request.form.get("expense_date")  # Make sure form field name is correct
+        description = request.form.get("description")
 
-@app.route('/delete_expense/<int:id>')
-def delete_expense(id):
-    expense = Expense.query.get_or_404(id)
-    db.session.delete(expense)
-    db.session.commit()
-    return redirect(url_for('dashboard'))
+        # Handle date formatting (same as we did for income)
+        try:
+            date = datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else datetime.today().date()
+        except ValueError:
+            flash("Invalid date format. Please use YYYY-MM-DD.", "error")
+            return redirect(url_for("add_expense"))
 
+        # Ensure all required fields are filled
+        if not amount or not category or not date:
+            flash("Please fill in all required fields.", "error")
+        else:
+            # Create a new expense entry
+            new_expense = Expense(
+                user_id=current_user.id,
+                amount=float(amount),
+                category=category,
+                date=date,
+                description=description
+            )
 
-if __name__ == '__main__':
-    with app.app_context():
-        if not os.path.exists('expense_tracker.db'):
-            db.create_all()
-    app.run(debug=True)
+            # Add to the database
+            db.session.add(new_expense)
+            db.session.commit()
+
+            # Show success message and redirect
+            flash("Expense added successfully!", "success")
+            return redirect(url_for("dashboard"))
+
+    # Load the latest categories for the dropdown
+    expense_categories = [cat.name for cat in ExpenseCategory.query.all()]
+    return render_template("add_expense.html", expense_categories=expense_categories)
+
 
