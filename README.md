@@ -12,7 +12,7 @@ project folder.
 3.⁠ ⁠Within the activated environment, use the following command to install Flask:
 	⁠pip install -r requirements.txt
 
-3.⁠ ⁠Run the app
+4.⁠ ⁠Run the app
 	⁠flask run --debug
 
 
