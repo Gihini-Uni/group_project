@@ -217,20 +217,29 @@ def report():
 
                            )
 
+@app.route('/')
+def index():
+    return redirect(url_for('login'))
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
         password = generate_password_hash(request.form['password'], method='pbkdf2:sha256')
+        currency = request.form['currency']  # NEW: get selected currency
+
         if User.query.filter_by(username=username).first():
             flash('Username already exists.')
             return redirect(url_for('register'))
-        user = User(username=username, password=password)
+
+        user = User(username=username, password=password, currency=currency)
         db.session.add(user)
         db.session.commit()
         flash('Registration successful. Please log in.')
         return redirect(url_for('login'))
     return render_template('register.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -239,35 +248,92 @@ def login():
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
+            login_user(user)
             session['user_id'] = user.id
-            return redirect(url_for('dashboard'))
-        flash('Invalid credentials.')
+            flash('Login successful!', 'success')
+            return redirect(url_for('dashboard'))  # Make sure this route exists
+        else:
+            flash('Invalid username or password', 'danger')
+    
     return render_template('login.html')
 
 @app.route('/logout')
+@login_required
 def logout():
-    # Logic for logging out the user, e.g., clearing session, redirecting to login page, etc.
+    logout_user()
+    flash("You’ve been logged out.")
     return redirect(url_for('login'))
 
+#from sqlalchemy import func
+
 @app.route('/dashboard')
+@login_required
 def dashboard():
-    if 'user_id' not in session:
+    # Get current user from session
+    #user_id = session.get('current_user')
+    user_id = current_user.id
+    if not user_id:
+        flash('Please log in to continue.')
         return redirect(url_for('login'))
-    user_id = session['user_id']
-    income = Income.query.filter_by(user_id=user_id).all()
-    expense = Expense.query.filter_by(user_id=user_id).all()
-    total_income = sum(i.amount for i in income)
-    total_expense = sum(e.amount for e in expense)
+
+    user = User.query.get(user_id)
+    if not user:
+        flash('User not found.')
+        return redirect(url_for('login'))
+
+    # Totals
+    total_income = db.session.query(func.sum(Income.amount))\
+        .filter_by(user_id=user_id).scalar() or 0
+    total_expense = db.session.query(func.sum(Expense.amount))\
+        .filter_by(user_id=user_id).scalar() or 0
     balance = total_income - total_expense
 
-    category_summary = {}
-    for e in expense:
-        category_summary[e.category] = category_summary.get(e.category, 0) + e.amount
+    # Income by Category
+    income_by_category = db.session.query(
+        Income.category,
+        func.sum(Income.amount).label('total_amount')
+    ).filter_by(user_id=user_id)\
+     .group_by(Income.category).all()
+    income = [{'category': i[0], 'total_amount': float(i[1])} for i in income_by_category]
 
-    return render_template('dashboard.html', income=income, expense=expense,
-                           total_income=total_income, total_expense=total_expense,
-                           balance=balance, category_summary=category_summary)
+    # Expense by Category
+    expense_by_category = db.session.query(
+        Expense.category,
+        func.sum(Expense.amount).label('total_amount')
+    ).filter_by(user_id=user_id)\
+     .group_by(Expense.category).all()
+    expense = [{'category': e[0], 'total_amount': float(e[1])} for e in expense_by_category]
 
+    # Monthly Income
+    income_monthly_data = db.session.query(
+        func.strftime('%Y-%m', Income.date).label('month'),
+        func.sum(Income.amount).label('amount')
+    ).filter_by(user_id=user_id)\
+     .group_by('month')\
+     .order_by('month').all()
+    income_monthly = [{'month': m[0], 'amount': float(m[1])} for m in income_monthly_data]
+
+    # Monthly Expense
+    expense_monthly_data = db.session.query(
+        func.strftime('%Y-%m', Expense.date).label('month'),
+        func.sum(Expense.amount).label('amount')
+    ).filter_by(user_id=user_id)\
+     .group_by('month')\
+     .order_by('month').all()
+    expense_monthly = [{'month': m[0], 'amount': float(m[1])} for m in expense_monthly_data]
+
+    return render_template(
+        'dashboard.html',
+        income_total=total_income,
+        expense_total=total_expense,
+        balance=balance,
+        income=income,
+        expense=expense,
+        income_monthly=income_monthly,
+        expense_monthly=expense_monthly,
+        currency=user.currency  # <-- This line ensures correct currency is shown
+    )
+    
 @app.route('/add_income', methods=['GET', 'POST'])
 def add_income():
     if 'user_id' not in session:
