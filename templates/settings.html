@@ -229,3 +229,55 @@
 
     </div>
 </div>
+
+<script>
+    const existingIncome = {{ income_suggestions|tojson }};
+    const existingExpense = {{ expense_suggestions|tojson }};
+
+    function setupSuggestions(inputId, suggestionId, existingList, msgId, formId) {
+        const input = document.getElementById(inputId);
+        const suggestionsBox = document.getElementById(suggestionId);
+        const msg = document.getElementById(msgId);
+        const form = document.getElementById(formId);
+
+        input.addEventListener('input', () => {
+            const val = input.value.toLowerCase();
+            suggestionsBox.innerHTML = '';
+            if (val.length === 0) {
+                suggestionsBox.classList.add('d-none');
+                return;
+            }
+
+            const matches = existingList.filter(cat => cat.toLowerCase().includes(val));
+            if (matches.length === 0) {
+                suggestionsBox.classList.add('d-none');
+            } else {
+                suggestionsBox.classList.remove('d-none');
+                matches.forEach(cat => {
+                    const item = document.createElement('div');
+                    item.classList.add('suggestion-item');
+                    item.innerHTML = `<i class="bi bi-tag-fill me-2"></i>${cat}`;
+                    item.onclick = () => {
+                        input.value = cat;
+                        suggestionsBox.classList.add('d-none');
+                    };
+                    suggestionsBox.appendChild(item);
+                });
+            }
+        });
+
+        form.addEventListener('submit', (e) => {
+            const val = input.value.trim();
+            if (existingList.includes(val)) {
+                e.preventDefault();
+                msg.textContent = "Category already exists!";
+            }
+        });
+    }
+
+    setupSuggestions('incomeCategory', 'incomeSuggestions', existingIncome, 'incomeMsg', 'incomeForm');
+    setupSuggestions('expenseCategory', 'expenseSuggestions', existingExpense, 'expenseMsg', 'expenseForm');
+</script>
+</body>
+</html>
+
