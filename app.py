@@ -407,4 +407,79 @@ def add_expense():
     expense_categories = [cat.name for cat in ExpenseCategory.query.all()]
     return render_template("add_expense.html", expense_categories=expense_categories)
 
+# Temporary storage for categories and currency
+
+currency = "USD"  # Default currency
+
+from flask import session
+
+@app.route("/settings", methods=["GET", "POST"])
+@login_required
+def settings():
+    default_expense_categories = [
+        "Transportation", "Bills", "Clothes", "Entertainment", "Food",
+        "Fuel", "General", "Gifts", "Health", "Holidays", "Home", "Other"
+    ]
+    
+    default_income_categories = [
+        "Salary", "Gift", "Deposit", "Savings", "Interest", "Other"
+    ]
+    
+    if request.method == "POST":
+        if "income_category" in request.form:
+            category = request.form.get("income_category", "").strip()
+            if not category:
+                flash("Income category cannot be empty.", "error")
+            elif category in default_income_categories or IncomeCategory.query.filter_by(name=category).first():
+                flash("Income category already exists!", "error")
+            else:
+                db.session.add(IncomeCategory(name=category))
+                db.session.commit()
+                flash("Income category added successfully!", "success")
+
+        elif "expense_category" in request.form:
+            category = request.form.get("expense_category", "").strip()
+            if not category:
+                flash("Expense category cannot be empty.", "error")
+            elif category in default_expense_categories or ExpenseCategory.query.filter_by(name=category).first():
+                flash("Expense category already exists!", "error")
+            else:
+                db.session.add(ExpenseCategory(name=category))
+                db.session.commit()
+                flash("Expense category added successfully!", "success")
+
+        elif "currency" in request.form:
+            new_currency = request.form.get("currency")
+            if new_currency:
+            	user = User.query.get(session.get('current_user'))
+            	if user:
+            		user.currency = new_currency
+            		db.session.commit()
+            		flash("Currency updated successfully!", "success")
+
+        return redirect(url_for("settings"))
+
+    # Get the existing categories from the database
+    income_suggestions = [cat.name for cat in IncomeCategory.query.all()]
+    expense_suggestions = [cat.name for cat in ExpenseCategory.query.all()]
+
+    # Use session currency or default
+    currency = session.get("currency", "USD")
+
+    return render_template(
+        "settings.html",
+        income_suggestions=income_suggestions + default_income_categories,
+        expense_suggestions=expense_suggestions + default_expense_categories,
+        currencies=["USD", "EUR", "GBP", "INR", "LKR", "AUD", "CAD", "CHF", "JPY", "CNY",
+    "HKD", "SGD", "NZD", "SEK", "NOK", "DKK", "RUB", "ZAR", "BRL", "MXN",
+    "MYR", "IDR", "THB", "PHP", "KRW", "PLN", "TRY", "ILS", "SAR", "AED",
+    "EGP", "BDT", "PKR", "NGN", "KWD", "QAR", "OMR"],
+        currency=currency
+    )
+
+if __name__ == '__main__':
+    with app.app_context():
+        if not os.path.exists('expense_tracker.db'):
+            db.create_all()
+    app.run(debug=True)
 
