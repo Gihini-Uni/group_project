@@ -183,3 +183,91 @@
     const expenseCategories = {{ expense|tojson }};
     const incomeMonthly = {{ income_monthly|tojson }};
     const expenseMonthly = {{ expense_monthly|tojson }};
+
+	      // Pie chart data
+    const pieLabels = expenseCategories.map(e => e.category);
+    const pieData = expenseCategories.map(e => e.total_amount);
+
+    const pieColors = [
+        "#8ccfb4", "#aed6c1", "#b7dfc6", "#cbead5", "#a6cdbf", // Soft greens
+        "#f4a1a1", "#e99393", "#e27e7e", "#d86a6a", "#cc5c5c"  // Minty reds
+    ];
+
+    new Chart(document.getElementById('expensePieChart'), {
+        type: 'pie',
+        data: {
+            labels: pieLabels,
+            datasets: [{
+                label: 'Expenses',
+                data: pieData,
+                backgroundColor: pieColors
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Line chart data
+    const months = incomeMonthly.map(item => item.month);
+    const incomeValues = incomeMonthly.map(item => item.amount);
+    const expenseValues = expenseMonthly.map(item => item.amount);
+
+    new Chart(document.getElementById('incomeExpenseLineChart'), {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: incomeValues,
+                    borderColor: '#5aaf76',
+                    backgroundColor: 'rgba(90,175,118,0.15)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Expenses',
+                    data: expenseValues,
+                    borderColor: '#d86a6a',
+                    backgroundColor: 'rgba(216,106,106,0.15)',
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                },
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            }
+        }
+    });
+</script>
+
+
+    <!-- Optional: Font Awesome -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</body>
+</html>
+
