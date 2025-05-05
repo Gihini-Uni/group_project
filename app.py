@@ -1,10 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-#from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from collections import defaultdict
 from db import db
+from sqlalchemy import func, extract, cast, Date
+from calendar import week
+from flask_login import LoginManager
+from flask_login import login_user, logout_user, login_required, current_user
+from datetime import datetime
+from flask_migrate import Migrate
+
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -12,90 +19,203 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///expense_tracker.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+migrate = Migrate(app, db)
+# Create DB tables (only run once or on startup)
+with app.app_context():
+    db.create_all()
 
-from models import User, Income, Expense
 
-#login_manager = LoginManager()
-#login_manager.init_app(app)
-#login_manager.login_view = 'login'
+from models import User, Income, Expense, IncomeCategory, ExpenseCategory
 
-#@login_manager.user_loader
-#def load_user(user_id):
-    #return User.query.get(int(user_id))
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+  return User.query.get(int(user_id))
 
 # Report route
 @app.route('/report')
+@login_required
 def report():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+    user_id = current_user.id
+    currency = current_user.currency if current_user.currency else "USD"
 
-    user_id = session['user_id']
 
-    # Get data from DB
-    incomes = Income.query.filter_by(user_id=user_id).all()
-    expenses = Expense.query.filter_by(user_id=user_id).all()
+    incomes = Income.query.filter_by(user_id=user_id).order_by(Income.date.asc()).all()
+    expenses = Expense.query.filter_by(user_id=user_id).order_by(Expense.date.asc()).all()
 
-    # Calculate totals
     total_income = sum(i.amount for i in incomes)
     total_expense = sum(e.amount for e in expenses)
     savings = total_income - total_expense
 
-    def prepare_chart_data(records, kind='income'):
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    income_category_filter = request.args.get('income_category')
+    expense_category_filter = request.args.get('expense_category')
+
+    income_query = Income.query.filter_by(user_id=user_id)
+    expense_query = Expense.query.filter_by(user_id=user_id)
+
+    if start_date:
+        income_query = income_query.filter(Income.date >= start_date)
+        expense_query = expense_query.filter(Expense.date >= start_date)
+    if end_date:
+        income_query = income_query.filter(Income.date <= end_date)
+        expense_query = expense_query.filter(Expense.date <= end_date)
+
+    if income_category_filter and income_category_filter != 'All':
+        income_query = income_query.filter(Income.category == income_category_filter)
+
+    if expense_category_filter and expense_category_filter != 'All':
+        expense_query = expense_query.filter(Expense.category == expense_category_filter)
+
+    filtered_incomes = income_query.order_by(Income.date.asc()).all()
+    filtered_expenses = expense_query.order_by(Expense.date.asc()).all()
+
+    filtered_income_total = sum(i.amount for i in filtered_incomes)
+    filtered_expense_total = sum(e.amount for e in filtered_expenses)
+    filtered_savings_total = filtered_income_total - filtered_expense_total
+
+    income_transactions = []
+    expense_transactions = []
+    
+    for income in filtered_incomes:
+        income_transactions.append({
+            'date': income.date.strftime('%Y-%m-%d'),
+            'category': income.category,
+            'amount': income.amount
+        })
+    for expense in filtered_expenses:
+        expense_transactions.append({
+            'date': expense.date.strftime('%Y-%m-%d'),
+            'category': expense.category,
+            'amount': expense.amount
+        })
+
+    income_transactions.sort(key=lambda x: datetime.strptime(x['date'], '%Y-%m-%d'))
+    expense_transactions.sort(key=lambda x: datetime.strptime(x['date'], '%Y-%m-%d'))
+
+    group_by = request.args.get('group_by', 'monthly')  # default to 'monthly'
+
+    def prepare_grouped_data(records, group_by='monthly'):
+        grouped_totals = defaultdict(float)
+        for r in records:
+            if group_by == 'daily':
+                key = r.date.strftime('%Y-%m-%d')
+            elif group_by == 'weekly':
+                key = f"{r.date.strftime('%Y')}-W{r.date.isocalendar()[1]}"
+            else:  # monthly
+                key = r.date.strftime('%Y-%m')
+            grouped_totals[key] += r.amount
+        return grouped_totals
+
+    income_grouped = prepare_grouped_data(filtered_incomes, group_by)
+    expense_grouped = prepare_grouped_data(filtered_expenses, group_by)
+    periods = sorted(set(list(income_grouped.keys()) + list(expense_grouped.keys())))
+
+    income_values = [income_grouped.get(p, 0) for p in periods]
+    expense_values = [expense_grouped.get(p, 0) for p in periods]
+    savings_values = [income_grouped.get(p, 0) - expense_grouped.get(p, 0) for p in periods]
+
+    def prepare_category_data(records):
         category_totals = defaultdict(float)
-        daily_totals = defaultdict(float)
+        for r in records:
+            category_totals[r.category] += r.amount
+        return category_totals
 
-        for record in records:
-            category_totals[record.category] += record.amount
-            date_str = record.date.strftime('%Y-%m-%d')
-            daily_totals[date_str] += record.amount
+    income_category_data = prepare_category_data(filtered_incomes)
+    expense_category_data = prepare_category_data(filtered_expenses)
 
-        return {
-            'categories': list(category_totals.keys()),
-            'category_values': list(category_totals.values()),
-            'dates': list(daily_totals.keys()),
-            'values': list(daily_totals.values())
-        }
+    income_categories = list(income_category_data.keys())
+    income_category_values = list(income_category_data.values())
 
-    # Prepare report data for all 3 types
-    report_data = {
-        'income': prepare_chart_data(incomes, 'income'),
-        'expense': prepare_chart_data(expenses, 'expense'),
-        'savings': {
-            'categories': ['Savings'],
-            'category_values': [savings],
-            'dates': sorted(set([i.date.strftime('%Y-%m-%d') for i in incomes] + [e.date.strftime('%Y-%m-%d') for e in expenses])),
-            'values': []
-        }
-    }
+    expense_categories = list(expense_category_data.keys())
+    expense_category_values = list(expense_category_data.values())
 
-    # For savings by date: (income - expense) per date
-    income_by_date = defaultdict(float)
-    expense_by_date = defaultdict(float)
-    for i in incomes:
-        date_str = i.date.strftime('%Y-%m-%d')
-        income_by_date[date_str] += i.amount
-    for e in expenses:
-        date_str = e.date.strftime('%Y-%m-%d')
-        expense_by_date[date_str] += e.amount
+    # Fetch all distinct categories (for dropdown filters)
+    all_income_categories = [c[0] for c in db.session.query(Income.category).filter_by(user_id=user_id).distinct()]
+    all_expense_categories = [c[0] for c in db.session.query(Expense.category).filter_by(user_id=user_id).distinct()]
 
-    all_dates = sorted(set(list(income_by_date.keys()) + list(expense_by_date.keys())))
-    savings_by_date = []
-    for date in all_dates:
-        savings_by_date.append(income_by_date[date] - expense_by_date[date])
+    from calendar import monthrange
 
-    report_data['savings']['values'] = savings_by_date
+    # Get current and previous month
+    today = datetime.today()
+    current_year = today.year
+    current_month = today.month
+    previous_month = current_month - 1 if current_month > 1 else 12
+    previous_month_year = current_year if current_month > 1 else current_year - 1
 
-    return render_template(
-        'report.html',
-        total_income=total_income,
-        total_expense=total_expense,
-        savings=savings,
-        report_data=report_data
-    )
+    # Filter this year's records
+    year_incomes = [i for i in incomes if i.date.year == current_year]
+    year_expenses = [e for e in expenses if e.date.year == current_year]
 
-@app.route('/')
-def index():
-    return redirect(url_for('login'))
+    # Filter for current and previous month
+    def is_month(record, y, m):
+        return record.date.year == y and record.date.month == m
+
+    current_month_income = sum(i.amount for i in incomes if is_month(i, current_year, current_month))
+    current_month_expense = sum(e.amount for e in expenses if is_month(e, current_year, current_month))
+    current_month_savings = current_month_income - current_month_expense
+
+    previous_month_income = sum(i.amount for i in incomes if is_month(i, previous_month_year, previous_month))
+    previous_month_expense = sum(e.amount for e in expenses if is_month(e, previous_month_year, previous_month))
+    previous_month_savings = previous_month_income - previous_month_expense
+
+    # Calculate savings increase
+    savings_increase = current_month_savings - previous_month_savings
+
+    # Average income and expense for current year
+    avg_income = sum(i.amount for i in year_incomes) / len(
+        set((i.date.month for i in year_incomes))) if year_incomes else 0
+    avg_expense = sum(e.amount for e in year_expenses) / len(
+        set((e.date.month for e in year_expenses))) if year_expenses else 0
+
+    # Most spending category (current year)
+    from collections import Counter
+
+    def top_category(records):
+        c = Counter()
+        for r in records:
+            if r.date.year == current_year:
+                c[r.category] += r.amount
+        return c.most_common(1)[0][0] if c else 'N/A'
+
+    top_spending_category = top_category(expenses)
+    top_earning_category = top_category(incomes)
+
+    return render_template('report.html',
+                           total_income=total_income,
+                           total_expense=total_expense,
+                           savings=savings,
+                           filtered_income_total=filtered_income_total,
+                           filtered_expense_total=filtered_expense_total,
+                           filtered_savings_total=filtered_savings_total,
+                           income_transactions=income_transactions,
+                           expense_transactions=expense_transactions,
+                           periods=periods,
+                           income_values=income_values,
+                           expense_values=expense_values,
+                           savings_values=savings_values,
+                           income_categories=income_categories,
+                           income_category_values=income_category_values,
+                           expense_categories=expense_categories,
+                           expense_category_values=expense_category_values,
+                           all_income_categories=all_income_categories,
+                           all_expense_categories=all_expense_categories,
+                           selected_income_category=income_category_filter if income_category_filter else 'All',
+                           selected_expense_category=expense_category_filter if expense_category_filter else 'All',
+                           savings_increase=savings_increase,
+                           avg_income=avg_income,
+                           avg_expense=avg_expense,
+                           top_spending_category=top_spending_category,
+                           top_earning_category=top_earning_category,
+                           group_by=group_by,
+                           currency=currency,
+
+                           )
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
