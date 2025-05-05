@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: mintcream;
+            font-family: Arial, sans-serif;
+        }
+
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: darkgreen;
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding-top: 30px;
+            color: white;
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .sidebar a {
+            display: block;
+            color: white;
+            padding: 15px 20px;
+            text-decoration: none;
+            font-size: 18px;
+        }
+
+        .sidebar a:hover {
+            background-color: black;
+        }
+
+        .sidebar a i {
+            margin-right: 10px;
+        }
+
+        .main {
+            margin-left: 250px;
+            padding: 30px;
+        }
+
+        .form-container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 700px;
+            margin: auto;
+        }
+
+        .custom-input {
+            border: 2px solid #28a745;
+            border-radius: 25px;
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .custom-input:focus {
+            border-color: #218838;
+            box-shadow: 0 0 0 0.2rem rgba(72, 180, 97, 0.25);
+            outline: none;
+        }
+
+        .suggestion-list {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            max-height: 150px;
+            overflow-y: auto;
+            position: absolute;
+            background-color: white;
+            width: 100%;
+            z-index: 1000;
+        }
+
+        .suggestion-item {
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .message {
+            margin-top: 10px;
+        }
+
+        .category-list {
+            margin-top: 20px;
+        }
+
+        .category-list h5 {
+            margin-top: 20px;
+            color: #218838;
+        }
+
+        .category-list ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <h2>Menu</h2>
+    <a href="/"><i class="fas fa-home"></i> Home</a>
+    <a href="/dashboard"><i class="fas fa-cog"></i> Dashboard</a>
+    <a href="/add_income"><i class="fas fa-plus-circle"></i> Add Income</a>
+    <a href="/add_expense"><i class="fas fa-minus-circle"></i> Add Expense</a>
+    <a href="/report"><i class="fas fa-chart-line"></i> Reports</a>
+    <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+</div>
+
+<div class="main">
+    <div class="form-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h2><i class="bi bi-gear-fill me-2"></i>Settings</h2>
+
+        <!-- Add Income Category -->
+        <form id="incomeForm" method="POST" action="{{ url_for('settings') }}" method="POST">
+            <label>Add Income Category:</label>
+            <div class="position-relative">
+                <input name="income_category" type="text" id="incomeCategory" class="custom-input mb-2">
+                <div id="incomeSuggestions" class="suggestion-list d-none"></div>
+            </div>
+            <button type="submit" class="btn btn-success">Add</button>
+            <div id="incomeMsg" class="message text-danger"></div>
+        </form>
+
+        <hr>
+
+        <!-- Add Expense Category -->
+        <form id="expenseForm" method="POST" action="{{ url_for('settings') }}" method="POST"">
+            <label>Add Expense Category:</label>
+            <div class="position-relative">
+                <input name="expense_category" type="text" id="expenseCategory" class="custom-input mb-2">
+                <div id="expenseSuggestions" class="suggestion-list d-none"></div>
+            </div>
+            <button type="submit" class="btn btn-success">Add</button>
+            <div id="expenseMsg" class="message text-danger"></div>
+        </form>
+
+        <hr>
+
+        <!-- Update Currency -->
+        <form method="POST" action="/settings">
+            <label>Select Currency:</label>
+            <select name="currency" class="custom-input">
+                {% for cur in currencies %}
+                    <option value="{{ cur }}" {% if currency == cur %}selected{% endif %}>{{ cur }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-success mt-2">Save</button>
+        </form>
+
+        <!-- Existing Categories Display -->
+		<div class="d-flex justify-content-between flex-wrap category-list">
+   			 <!-- Expense Categories - Left -->
+    		<div class="me-5" style="display: none;">
+        		<h5><i class="bi bi-bag-dash-fill me-2"></i>Existing Expense Categories:</h5>
+        		<ul>
+            		<!-- Default expense categories -->
+            		<li><i class="bi bi-car-front me-2"></i>Transportation</li>
+            		<li><i class="bi bi-receipt-cutoff me-2"></i>Bills</li>
+            		<li><i class="bi bi-bag-fill me-2"></i>Clothes</li>
+            		<li><i class="bi bi-controller me-2"></i>Entertainment</li>
+            		<li><i class="bi bi-cup-straw me-2"></i>Food</li>
+            		<li><i class="bi bi-fuel-pump-fill me-2"></i>Fuel</li>
+            		<li><i class="bi bi-clipboard2-check me-2"></i>General</li>
+            		<li><i class="bi bi-gift-fill me-2"></i>Gifts</li>
+            		<li><i class="bi bi-heart-pulse-fill me-2"></i>Health</li>
+            		<li><i class="bi bi-airplane-fill me-2"></i>Holidays</li>
+            		<li><i class="bi bi-house-fill me-2"></i>Home</li>
+            		<li><i class="bi bi-three-dots me-2"></i>Other</li>
+
+            		<!-- User-added categories -->
+            		{% for cat in expense_suggestions %}
+                		{% if cat.lower() not in ["transportation", "bills", "clothes", "entertainment", "food", "fuel", "general", "gifts", "health", "holidays", "home", "other"] %}
+                    			<li><i class="bi bi-tag me-2"></i>{{ cat }}</li>
+                		{% endif %}
+            		{% endfor %}
+        		</ul>
+    		</div>
+
+    		<!-- Income Categories - Right -->
+    		<div class="ms-5" style="display: none;">
+        		<h5><i class="bi bi-cash-stack me-2"></i>Existing Income Categories:</h5>
+        		<ul>
+            		<!-- Default income categories -->
+            		<li><i class="bi bi-briefcase me-2"></i>Salary</li>
+            		<li><i class="bi bi-gift me-2"></i>Gift</li>
+            		<li><i class="bi bi-bank me-2"></i>Deposit</li>
+            		<li><i class="bi bi-piggy-bank me-2"></i>Savings</li>
+            		<li><i class="bi bi-graph-up-arrow me-2"></i>Interest</li>
+            		<li><i class="bi bi-tags me-2"></i>Other</li>
+
+            		<!-- User-added categories -->
+            		{% for cat in income_suggestions %}
+                		{% if cat.lower() not in ["salary", "gift", "deposit", "savings", "interest", "other"] %}
+                    		<li><i class="bi bi-tag me-2"></i>{{ cat }}</li>
+                		{% endif %}
+           			{% endfor %}
+        		</ul>
+    		</div>
+		</div>
+
+    </div>
+</div>
