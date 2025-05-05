@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Register | Expense Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <style>
+
+        input[type="text"],
+        input[type="password"],
+         select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid mintcream;
+            border-radius: 5px;
+            background: mintcream;
+            font-size: 16px;
+        }
+
+        
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Register</h2>
+        <form method="POST">
+    <input type="text" name="username" placeholder="Username" required><br>
+    <input type="password" name="password" placeholder="Password" required><br>
+
+    <!-- Currency Selection Dropdown -->
+    <select name="currency" required>
+        <option value="">Select your currency</option>
+        <option value="LKR">Sri Lankan Rupee (LKR)</option>
+        <option value="USD">US Dollar (USD)</option>
+        <option value="EUR">Euro (EUR)</option>
+        <option value="GBP">British Pound (GBP)</option>
+        <option value="INR">Indian Rupee (INR)</option>
+        <option value="JPY">Japanese Yen (JPY)</option>
+        <option value="AUD">Australian Dollar (AUD)</option>
+        <option value="CAD">Canadian Dollar (CAD)</option>
+        <option value="CHF">Swiss Franc (CHF)</option>
+        <option value="CNY">Chinese Yuan (CNY)</option>
+        <option value="SGD">Singapore Dollar (SGD)</option>
+    </select><br><br>
+
+    <button type="submit">Register</button>
+</form>
+
+        <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+    </div>
+</body>
+</html>
