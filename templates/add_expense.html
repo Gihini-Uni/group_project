@@ -136,6 +136,83 @@ a.text-success {
         </p>
     </div>
 
+	<!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+    	
+    $(document).ready(function() {
+        $('#category').select2({
+            templateResult: formatOption,
+            templateSelection: formatOption
+        });
+
+        function formatOption(state) {
+            if (!state.id) return state.text;
+
+            const iconClass = $(state.element).data('icon');
+            if (iconClass) {
+                return $(
+                    `<span><i class="bi ${iconClass}" style="margin-right: 8px;"></i>${state.text}</span>`
+                );
+            } else {
+                return state.text;
+            }
+        }
+    });
+
+
+        // Initialize Select2
+        $('#category').select2({
+            minimumResultsForSearch: -1 // Disable search bar
+        });
+
+        // Date Bar Handling
+        const dateItems = document.querySelectorAll('.date-item');
+        const expenseDateInput = document.getElementById('expense_date');
+        const customDatePicker = document.getElementById('customDatePicker');
+        const customDateItem = document.getElementById('customDateItem');
+
+        dateItems.forEach(item => {
+            item.addEventListener('click', () => {
+                dateItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                const days = item.dataset.days;
+                const today = new Date();
+
+                if (days === 'custom') {
+                    customDatePicker.style.display = 'inline-block';
+                    customDatePicker.focus();
+                } else {
+                    customDatePicker.style.display = 'none';
+                    today.setDate(today.getDate() - parseInt(days));
+                    expenseDateInput.value = today.toISOString().split('T')[0];
+                }
+
+                item.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            });
+        });
+
+        customDatePicker.addEventListener('change', (event) => {
+            expenseDateInput.value = event.target.value;
+        });
+
+        const today = new Date();
+        expenseDateInput.value = today.toISOString().split('T')[0];
+
+        // Button loading spinner
+        const expenseForm = document.getElementById('expenseForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        expenseForm.addEventListener('submit', (e) => {
+            submitBtn.classList.add('button-loading');
+            submitBtn.disabled = true;
+        });
+    </script>
+
 
   </body>
 </html>
