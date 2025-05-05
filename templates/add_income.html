@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Income | Expense Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style2.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <style>
+        body {
+
+            background-color: mintcream;
+
+        }
+        
+        
+        .form-control,
+        .form-select,
+        textarea {
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            padding: 12px;
+        }
+
+
+        h2 {
+
+            color: darkgreen;
+
+        }
+
+        .form-control,
+        .form-select,
+        textarea {
+            background: mintcream;
+            border: 1px solid mintcream;
+        }
+
+        button {
+           background-color: darkgreen;
+        }
+
+
+        label {
+
+            color: darkgreen;
+
+        }
+
+
+        .date-item {
+            background-color: mintcream;
+            border: 1px solid darkgreen;
+        }
+
+        .date-item.active {
+            background-color: darkgreen;
+
+        }
+
+        #customDatePicker {
+
+            background-color: mintcream;
+            border: 1px solid darkgreen;
+       }
+
+        
+        .select2-container--default .select2-selection--single {
+    		background-color: mintcream;
+    		border: 1px solid mintcream;
+    		border-radius: 5px;
+    		height: 50px;
+    		padding: 10px;
+    		font-size: 16px;
+		}
+
+        
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Add Income</h2>
+
+        <!-- Date Bar -->
+        <div class="date-bar" id="dateBar">
+            <div class="date-item active" data-days="0">Today</div>
+            <div class="date-item" id="customDateItem" data-days="custom">Custom Date</div>
+            <input type="date" id="customDatePicker">
+        </div>
+
+        <form id="incomeForm" method="POST">
+            <input type="hidden" name="income_date" id="income_date">
+
+            <!-- Amount -->
+            <label for="amount">Amount</label>
+            <input type="number" id="amount" step="1" name="amount" class="form-control" placeholder="Enter amount" min="1" required>
+
+            <!-- Category -->
+            <label for="category">Category</label>
+            <select name="category" id="category" class="form-select" required>
+                <option value="" disabled selected>Select Category</option>
+
+                {% for cat in income_categories %}
+                    {% if cat not in ['salary', 'gift', 'deposit', 'savings', 'interest', 'other'] %}
+                        <option value="{{ cat }}">{{ cat }}</option>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Static default categories with icons -->
+                <option value="salary" data-icon="bi-briefcase">Salary</option>
+                <option value="gift" data-icon="bi-gift">Gift</option>
+                <option value="deposit" data-icon="bi-bank">Deposit</option>
+                <option value="savings" data-icon="bi-piggy-bank">Savings</option>
+                <option value="interest" data-icon="bi-graph-up-arrow">Interest</option>
+                <option value="other" data-icon="bi-tags">Other</option>
+            </select>
+
+            <!-- Notes -->
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-control" placeholder="Add any notes here..." rows="3"></textarea>
+
+            <!-- Submit -->
+            <button type="submit" id="submitBtn">Add Income</button>
+        </form>
+
+        <div class="small-note">
+            New categories can be added from settings if needed
+        </div>
+
+        <p class="text-center mt-3"><a href="{{ url_for('dashboard') }}" class="text-success fw-bold">Back to Dashboard</a></p>
+    </div>
+
+    <!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script>
+        // Function to format the category options with icons
+        function formatCategory(option) {
+            if (!option.id) return option.text; // If no icon, return the text as is
+            const iconClass = $(option.element).data('icon'); // Get the icon class
+            return $('<span><i class="bi ' + iconClass + '"></i> ' + option.text + '</span>'); // Return icon and text
+        }
+
+        $(document).ready(function() {
+            $('#category').select2({
+                templateResult: formatCategory,  // Format results with icons
+                templateSelection: formatCategory, // Format selected option with icon
+                minimumResultsForSearch: -1 // Hide search box
+            });
+        });
+
+        // Date Bar Handling (existing code)
+        const dateItems = document.querySelectorAll('.date-item');
+        const incomeDateInput = document.getElementById('income_date');
+        const customDatePicker = document.getElementById('customDatePicker');
+        const customDateItem = document.getElementById('customDateItem');
+
+        dateItems.forEach(item => {
+            item.addEventListener('click', () => {
+                dateItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                const days = item.dataset.days;
+                const today = new Date();
+
+                if (days === 'custom') {
+                    customDatePicker.style.display = 'inline-block'; // Show calendar
+                    customDatePicker.focus(); // Auto focus
+                } else {
+                    customDatePicker.style.display = 'none'; // Hide calendar
+                    today.setDate(today.getDate() - parseInt(days));
+                    incomeDateInput.value = today.toISOString().split('T')[0];
+                }
+
+                item.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            });
+        });
+
+        customDatePicker.addEventListener('change', (event) => {
+            incomeDateInput.value = event.target.value;
+        });
+
+        const today = new Date();
+        incomeDateInput.value = today.toISOString().split('T')[0];
+
+        // Button loading spinner (existing code)
+        const incomeForm = document.getElementById('incomeForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        incomeForm.addEventListener('submit', (e) => {
+            submitBtn.classList.add('button-loading');
+            submitBtn.disabled = true;
+        });
+    </script>
+</body>
+</html>
