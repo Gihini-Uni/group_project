@@ -65,4 +65,9 @@ body {
         p a:hover {
             text-decoration: underline;
         }
+        .topic {
+            text-align: center;
+            margin: 10px auto;
+        }
+
         
