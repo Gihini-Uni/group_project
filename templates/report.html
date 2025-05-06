@@ -100,9 +100,9 @@
     .report-blocks .savings { background-color: #6a994e; }
     .report-blocks .savchanges { background-color: #6a994e; color:black;}
     .report-blocks .avgincome { background-color: #d0f0c0; color:black; }
-    .report-blocks .avgexpense { background-color: #6a994e; color:black;}
-    .report-blocks .topspend { background-color: #d0f0c0; color:black;}
-    .report-blocks .topearn { background-color: #6a994e; color:black;}
+    .report-blocks .avgexpense { background-color: #ffe6e6; color:black;}
+    .report-blocks .topspend { background-color: #d86a6b; color:black;}
+    .report-blocks .topearn { background-color: #a7c957; color:black;}
     .report-blocks .block h3 { margin-top:25px; font-size:1.1rem; }
     .report-blocks .block p { margin-top:5px; font-size:1.3rem; font-weight:bold; }
 
@@ -214,7 +214,7 @@ table th {
     color: var(--dark-green) !important;
 }
 
-.section-title, h1, h2, h3, h4 {
+.section-title, h1, h2,h4 {
     color: var(--dark-green) !important;
 }
 
@@ -298,15 +298,15 @@ a:hover {
 
                 {% if filtered_income_total is not none %}
 <div class="block in-ex-sa">
-<h3>Income</h3>
+<h3 style="color:darkgreen;">Income</h3>
 <p>{{ currency }} {{ filtered_income_total }}</p>
 </div>
 <div class="block in-ex-sa">
-<h3>Expense</h3>
+<h3 style="color:darkgreen;">Expense</h3>
 <p>{{ currency }} {{ filtered_expense_total }}</p>
 </div>
 <div class="block in-ex-sa">
-<h3>Savings</h3>
+<h3 style="color:darkgreen;">Savings</h3>
 <p>{{ currency }} {{ filtered_savings_total }}</p>
 </div>
                 {% endif %}
@@ -316,7 +316,7 @@ a:hover {
 <!--insights section-->
 <div class="report-blocks">
 <div class="block savchanges">
-<h3>Savings Change</h3>
+<h3 style="color:darkgreen;">Savings Change</h3>
 <p>
                         {% if savings_increase >= 0 %}
                           +{{ "%.2f"|format(savings_increase) }}
@@ -326,19 +326,19 @@ a:hover {
                     </p>
 </div>
 <div class="block avgincome">
-<h3>Avg. Income</h3>
+<h3 style="color:darkgreen;">Avg. Income</h3>
 <p>{{ currency }} {{ "%.2f"|format(avg_income) }}</p>
 </div>
 <div class="block avgexpense">
-<h3>Avg. Expense</h3>
+<h3 style="color:darkred;">Avg. Expense</h3>
 <p>{{ currency }} {{ "%.2f"|format(avg_expense) }}</p>
 </div>
 <div class="block topspend">
-<h3>Top Spending Category</h3>
+<h3 style="color:darkred;" >Top Spending Category</h3>
 <p>{{ top_spending_category }}</p>
 </div>
 <div class="block topearn">
-<h3>Top Earning Category</h3>
+<h3 style="color:darkgreen;">Top Earning Category</h3>
 <p>{{ top_earning_category }}</p>
 </div>
 </div>
