@@ -15,7 +15,3 @@ project folder.
 4.⁠ ⁠Run the app
 	⁠flask run --debug
 
-
-Note: The following link contains the background image of login and register pages which should be included in the static folder 
-
-https://drive.google.com/file/d/1dEtmKLQkGmIEKIv8wqYBEsCZ7-5aLCIO/view?usp=drive_link
