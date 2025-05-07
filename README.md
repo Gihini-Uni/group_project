@@ -17,5 +17,5 @@ project folder.
 
 Recommendation by the lecturer during the Viva: Display the list of existing Income & Expense categories on the Settings page.
 To do this, simply change the code line, 
-<div class="me-5" style="display: none;"> to <div class="me-5" style="display: grid;">
+*<div class="me-5" style="display: none;">* to *<div class="me-5" style="display: grid;">*
 	in settings.html (templates/settings.html) at lines 182 and 209.
